@@ -32,7 +32,7 @@ project(${PACKAGE_NAME} C CXX)
 
 set(gRPC_INSTALL_BINDIR "bin" CACHE STRING "Installation directory for executables")
 set(gRPC_INSTALL_LIBDIR "lib" CACHE STRING "Installation directory for libraries")
-set(gRPC_INSTALL_INCLUDEDIR "include" CACHE STRING "Installation directory for headers")
+set(gRPC_INSTALL_INCLUDEDIR "include" CACHE STRING "FInstallation directory for headers")
 set(gRPC_INSTALL_CMAKEDIR "lib/cmake/${PACKAGE_NAME}" CACHE STRING "Installation directory for cmake config files")
 set(gRPC_INSTALL_SHAREDIR "share/grpc" CACHE STRING "Installation directory for root certificates")
 
@@ -213,6 +213,7 @@ endfunction()
 
 add_custom_target(plugins
   DEPENDS
+  grpc_c_plugin
   grpc_cpp_plugin
   grpc_csharp_plugin
   grpc_node_plugin
@@ -4811,6 +4812,7 @@ endif (gRPC_BUILD_CODEGEN)
 endif (gRPC_BUILD_TESTS)
 
 add_library(grpc_plugin_support
+  src/compiler/c_generator.cc
   src/compiler/cpp_generator.cc
   src/compiler/csharp_generator.cc
   src/compiler/node_generator.cc
@@ -13231,6 +13233,44 @@ target_link_libraries(grpc_cli
 
 
 endif (gRPC_BUILD_TESTS)
+if (gRPC_BUILD_CODEGEN)
+
+add_executable(grpc_c_plugin
+  src/compiler/c_plugin.cc
+)
+
+target_include_directories(grpc_c_plugin
+  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
+  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
+  PRIVATE ${_gRPC_SSL_INCLUDE_DIR}
+  PRIVATE ${_gRPC_PROTOBUF_INCLUDE_DIR}
+  PRIVATE ${_gRPC_ZLIB_INCLUDE_DIR}
+  PRIVATE ${_gRPC_BENCHMARK_INCLUDE_DIR}
+  PRIVATE ${_gRPC_CARES_INCLUDE_DIR}
+  PRIVATE ${_gRPC_GFLAGS_INCLUDE_DIR}
+  PRIVATE ${_gRPC_ADDRESS_SORTING_INCLUDE_DIR}
+  PRIVATE ${_gRPC_NANOPB_INCLUDE_DIR}
+  PRIVATE ${_gRPC_PROTO_GENS_DIR}
+)
+
+target_link_libraries(grpc_c_plugin
+  ${_gRPC_PROTOBUF_PROTOC_LIBRARIES}
+  ${_gRPC_PROTOBUF_LIBRARIES}
+  ${_gRPC_ALLTARGETS_LIBRARIES}
+  grpc_plugin_support
+)
+
+
+
+if (gRPC_INSTALL)
+  install(TARGETS grpc_c_plugin EXPORT gRPCTargets
+    RUNTIME DESTINATION ${gRPC_INSTALL_BINDIR}
+    LIBRARY DESTINATION ${gRPC_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${gRPC_INSTALL_LIBDIR}
+  )
+endif()
+
+endif (gRPC_BUILD_CODEGEN)
 if (gRPC_BUILD_CODEGEN)
 
 add_executable(grpc_cpp_plugin
