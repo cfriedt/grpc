@@ -26,6 +26,7 @@
 
 #include "src/compiler/c_generator.h"
 #include "src/compiler/generator_helpers.h"
+#define CLASSNAME_GENERATOR_NAMESPACE grpc_c_generator
 #include "src/compiler/protobuf_plugin.h"
 
 class CGrpcGenerator : public grpc::protobuf::compiler::CodeGenerator {
@@ -108,7 +109,7 @@ class CGrpcGenerator : public grpc::protobuf::compiler::CodeGenerator {
         grpc_c_generator::GetSourceServices(&pbfile, generator_parameters) +
         grpc_c_generator::GetSourceEpilogue(&pbfile, generator_parameters);
     std::unique_ptr<grpc::protobuf::io::ZeroCopyOutputStream> source_output(
-        context->Open(file_name + ".grpc.pb.cc"));
+        context->Open(file_name + ".grpc.pb.c"));
     grpc::protobuf::io::CodedOutputStream source_coded_out(source_output.get());
     source_coded_out.WriteRaw(source_code.data(), source_code.size());
 

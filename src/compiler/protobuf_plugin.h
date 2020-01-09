@@ -20,12 +20,17 @@
 #define GRPC_INTERNAL_COMPILER_PROTOBUF_PLUGIN_H
 
 #include "src/compiler/config.h"
+#include "src/compiler/c_generator_helpers.h"
 #include "src/compiler/cpp_generator_helpers.h"
 #include "src/compiler/python_generator_helpers.h"
 #include "src/compiler/python_private_generator.h"
 #include "src/compiler/schema_interface.h"
 
 #include <vector>
+
+#ifndef CLASSNAME_GENERATOR_NAMESPACE
+#define CLASSNAME_GENERATOR_NAMESPACE grpc_cpp_generator
+#endif
 
 // Get leading or trailing comments in a string.
 template <typename DescriptorType>
@@ -42,10 +47,10 @@ class ProtoBufMethod : public grpc_generator::Method {
   grpc::string name() const { return method_->name(); }
 
   grpc::string input_type_name() const {
-    return grpc_cpp_generator::ClassName(method_->input_type(), true);
+    return CLASSNAME_GENERATOR_NAMESPACE::ClassName(method_->input_type(), true);
   }
   grpc::string output_type_name() const {
-    return grpc_cpp_generator::ClassName(method_->output_type(), true);
+    return CLASSNAME_GENERATOR_NAMESPACE::ClassName(method_->output_type(), true);
   }
 
   grpc::string get_input_type_name() const {

@@ -24,7 +24,7 @@
 #include "src/compiler/config.h"
 #include "src/compiler/generator_helpers.h"
 
-namespace grpc_cpp_generator {
+namespace grpc_c_generator {
 
 inline grpc::string DotsToColons(const grpc::string& name) {
   return grpc_generator::StringReplace(name, ".", "::");
@@ -45,7 +45,7 @@ inline grpc::string ClassName(const grpc::protobuf::Descriptor* descriptor,
   grpc::string inner_name = descriptor->full_name().substr(outer_name.size());
 
   if (qualified) {
-    return "::" + DotsToColons(outer_name) + DotsToUnderscores(inner_name);
+    return /* "::" + */ DotsToColons(outer_name) + DotsToUnderscores(inner_name);
   } else {
     return outer->name() + DotsToUnderscores(inner_name);
   }
@@ -58,6 +58,6 @@ inline grpc::string GetCppComments(const DescriptorType* desc, bool leading) {
   return grpc_generator::GetPrefixedComments(desc, leading, "//");
 }
 
-}  // namespace grpc_cpp_generator
+}  // namespace grpc_c_generator
 
 #endif  // GRPC_INTERNAL_COMPILER_C_GENERATOR_HELPERS_H
