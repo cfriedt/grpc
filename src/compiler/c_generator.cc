@@ -77,6 +77,7 @@ void PrintIncludes(grpc_generator::Printer* printer,
     }
   }
 
+  printer->Print(vars, "#include <grpc/grpc.h>\n");
   for (auto i = headers.begin(); i != headers.end(); i++) {
     vars["h"] = *i;
     printer->Print(vars, "#include $l$$h$$r$\n");
@@ -136,11 +137,16 @@ grpc::string GetHeaderIncludes(grpc_generator::File* file,
                   params.grpc_search_path);
     printer->Print(vars, "\n");
     printer->Print(vars, "/* namespace grpc { */\n");
-    printer->Print(vars, "struct CompletionQueue;\n");
-    printer->Print(vars, "struct Channel;\n");
-    printer->Print(vars, "struct ServerCompletionQueue;\n");
-    printer->Print(vars, "struct ServerContext;\n");
-    printer->Print(vars, "struct ClientContext;\n");
+    printer->Print(vars, "struct _Channel;\n");
+    printer->Print(vars, "typedef struct _Channel* Channel;\n");
+    printer->Print(vars, "struct _ClientContext;\n");
+    printer->Print(vars, "typedef struct _ClientContext* ClientContext;\n");
+    printer->Print(vars, "struct _CompletionQueue;\n");
+    printer->Print(vars, "typedef struct _CompletionQueue* CompletionQueue;\n");
+    printer->Print(vars, "struct _ServerCompletionQueue;\n");
+    printer->Print(vars, "typedef struct _ServerCompletionQueue* ServerCompletionQueue;\n");
+    printer->Print(vars, "struct _ServerContext;\n");
+    printer->Print(vars, "typedef struct _ServerContext* ServerContext;\n");
     printer->Print(vars, "/* }  // namespace grpc */\n\n");
 
     if (!file->package().empty()) {
@@ -168,7 +174,7 @@ void PrintHeaderClientMethodInterfaces(
 #endif
       printer->Print(
           *vars,
-          "grpc_status_code (*$Method$)(struct ClientContext* context, "
+          "grpc_status_code (*$Method$)(ClientContext* context, "
           "const $Request$* request, const $Response$* response);\n");
       printer->Outdent();
 #if 0
@@ -228,8 +234,8 @@ void PrintHeaderClientMethod(grpc_generator::Printer* printer,
 #endif
       printer->Print(
           *vars,
-          "grpc_status_code (*$Method$)(::grpc::ClientContext* context, "
-          "const $Request$& request, $Response$* response) override;\n");
+          "grpc_status_code (*$Method$)(ClientContext* context, "
+          "const $Request$& request, $Response$* response);\n");
 #if 0
       for (auto async_prefix : async_prefixes) {
         (*vars)["AsyncPrefix"] = async_prefix.prefix;
@@ -345,6 +351,7 @@ void PrintHeaderClientMethod(grpc_generator::Printer* printer,
 void PrintHeaderClientMethodCallbackInterfacesStart(
     grpc_generator::Printer* printer,
     std::map<grpc::string, grpc::string>* vars) {
+#if 0
   // This declares the interface for the callback-based API. The components
   // are pure; even though this is new (post-1.0) API, it can be pure because
   // it is an entirely new interface that happens to be scoped within
@@ -355,6 +362,7 @@ void PrintHeaderClientMethodCallbackInterfacesStart(
   printer->Print(" public:\n");
   printer->Indent();
   printer->Print("virtual ~experimental_async_interface() {}\n");
+#endif
 }
 
 void PrintHeaderClientMethodCallbackInterfaces(
@@ -370,7 +378,7 @@ void PrintHeaderClientMethodCallbackInterfaces(
 
   if (method->NoStreaming()) {
     printer->Print(*vars,
-                   "virtual void $Method$(::grpc::ClientContext* context, "
+                   "virtual void $Method$(ClientContext* context, "
                    "const $Request$* request, $Response$* response, "
                    "std::function<void(::grpc::Status)>) = 0;\n");
   } else if (ClientOnlyStreaming(method)) {
@@ -428,6 +436,7 @@ void PrintHeaderClientMethodCallback(grpc_generator::Printer* printer,
                                      const grpc_generator::Method* method,
                                      std::map<grpc::string, grpc::string>* vars,
                                      bool is_public) {
+#if 0
   // Reserve is_public for future expansion
   assert(is_public);
 
@@ -459,6 +468,7 @@ void PrintHeaderClientMethodCallback(grpc_generator::Printer* printer,
                    "::grpc::experimental::ClientBidiReactor< "
                    "$Request$,$Response$>* reactor) override;\n");
   }
+#endif
 }
 
 void PrintHeaderClientMethodCallbackEnd(
@@ -1087,15 +1097,20 @@ void PrintHeaderServerMethodRaw(grpc_generator::Printer* printer,
 #endif
 }
 
-#include <iostream>
 void PrintHeaderService(grpc_generator::Printer* printer,
                         const grpc_generator::Service* service,
                         std::map<grpc::string, grpc::string>* vars) {
   (*vars)["Service"] = service->name();
 
+  if ( vars->end() == vars->find( "services_namespace" ) ) {
+      (*vars)["service_prefix"] = "";
+  } else {
+      (*vars)["service_prefix"] = (*vars)["services_namespace"] + "_";
+  }
+
   printer->Print(service->GetLeadingComments("//").c_str());
   printer->Print(*vars,
-                 "struct $filename_identifier$_$Service$ {\n");
+                 "typedef struct _$service_prefix$$Service$ {\n");
   printer->Indent();
 
 #if 0
@@ -1135,7 +1150,7 @@ void PrintHeaderService(grpc_generator::Printer* printer,
                                       false);
   }
   printer->Outdent();
-  printer->Print("};\n");
+  printer->Print("} $service_prefix$$Service$;\n");
 #if 0
   printer->Print(
       "class Stub final : public StubInterface"
@@ -1174,10 +1189,9 @@ void PrintHeaderService(grpc_generator::Printer* printer,
       "::grpc::ChannelInterface>& channel, "
       "const ::grpc::StubOptions& options = ::grpc::StubOptions());\n");
 #else
-  printer->Print(
-      "static std::unique_ptr<Stub> NewStub(const std::shared_ptr< "
-      "::grpc::ChannelInterface>& channel, "
-      "const ::grpc::StubOptions& options = ::grpc::StubOptions());\n");
+  printer->Print(*vars,
+      "grpc_status_code $service_prefix$$Service$_init( Channel channel, $service_prefix$$Service$ *service );\n"
+      "void $service_prefix$$Service$_fini( $service_prefix$$Service$ *service );\n");
 #endif
 
 #if 0
