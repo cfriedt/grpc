@@ -129,24 +129,15 @@ grpc::string GetHeaderIncludes(grpc_generator::File* file,
                     "");
     }
     static const char* headers_strs[] = {
-        "grpc/impl/codegen/client_context.h",
         "grpc/impl/codegen/grpc_types.h",
+        "grpc/impl/codegen/client_context.h",
         "grpc/impl/codegen/status.h",
         "grpc/impl/codegen/sync.h"};
     std::vector<grpc::string> headers(headers_strs, array_end(headers_strs));
     PrintIncludes(printer.get(), headers, params.use_system_headers,
                   params.grpc_search_path);
-    printer->Print(vars, "\n");
-    printer->Print(vars, "/* namespace grpc { */\n");
-    printer->Print(vars, "struct grpc_channel;\n");
-    printer->Print(vars, "struct grpc_client_context;\n");
-    printer->Print(vars, "struct _CompletionQueue;\n");
-    printer->Print(vars, "typedef struct _CompletionQueue* CompletionQueue;\n");
-    printer->Print(vars, "struct _ServerCompletionQueue;\n");
-    printer->Print(vars, "typedef struct _ServerCompletionQueue* ServerCompletionQueue;\n");
-    printer->Print(vars, "struct _ServerContext;\n");
-    printer->Print(vars, "typedef struct _ServerContext* ServerContext;\n");
-    printer->Print(vars, "/* }  // namespace grpc */\n\n");
+
+    printer->Print("\n");
 
     if (!file->package().empty()) {
       std::vector<grpc::string> parts = file->package_parts();
@@ -155,7 +146,7 @@ grpc::string GetHeaderIncludes(grpc_generator::File* file,
         vars["part"] = *part;
         printer->Print(vars, "/* namespace $part$ { */\n");
       }
-      printer->Print(vars, "\n");
+      printer->Print("\n");
     }
   }
   return output;
