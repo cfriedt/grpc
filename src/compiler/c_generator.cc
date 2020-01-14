@@ -137,8 +137,7 @@ grpc::string GetHeaderIncludes(grpc_generator::File* file,
                   params.grpc_search_path);
     printer->Print(vars, "\n");
     printer->Print(vars, "/* namespace grpc { */\n");
-    printer->Print(vars, "struct _Channel;\n");
-    printer->Print(vars, "typedef struct _Channel* Channel;\n");
+    printer->Print(vars, "struct grpc_channel;\n");
     printer->Print(vars, "struct _ClientContext;\n");
     printer->Print(vars, "typedef struct _ClientContext* ClientContext;\n");
     printer->Print(vars, "struct _CompletionQueue;\n");
@@ -172,10 +171,11 @@ void PrintHeaderClientMethodInterfaces(
 #if 0
     if (method->NoStreaming()) {
 #endif
+      printer->Indent();
       printer->Print(
           *vars,
           "grpc_status_code (*$Method$)(ClientContext* context, "
-          "const $Request$* request, const $Response$* response);\n");
+          "const $Request$ request, $Response$ response);\n");
       printer->Outdent();
 #if 0
     } else if (ClientOnlyStreaming(method)) {
@@ -513,8 +513,8 @@ void PrintHeaderServerMethodSync(grpc_generator::Printer* printer,
 #endif
     printer->Print(*vars,
                    "grpc_status_code (*$Method$)("
-                   "struct ServerContext* context, const $Request$* request, "
-                   "$Response$* response);\n");
+                   "struct ServerContext* context, const $Request$ request, "
+                   "$Response$ response);\n");
 #if 0
   } else if (ClientOnlyStreaming(method)) {
     printer->Print(*vars,
@@ -1102,17 +1102,9 @@ void PrintHeaderService(grpc_generator::Printer* printer,
                         std::map<grpc::string, grpc::string>* vars) {
   (*vars)["Service"] = service->name();
 
-  if ( vars->end() == vars->find( "services_namespace" ) ) {
-      (*vars)["service_prefix"] = "";
-  } else {
-      (*vars)["service_prefix"] = (*vars)["services_namespace"] + "_";
-  }
-
   printer->Print(service->GetLeadingComments("//").c_str());
   printer->Print(*vars,
-                 "typedef struct _$service_prefix$$Service$ {\n");
-  printer->Indent();
-
+                 "typedef struct _$prefix$$Service$ {\n");
 #if 0
   // Service metadata
   printer->Print(*vars,
@@ -1145,12 +1137,17 @@ void PrintHeaderService(grpc_generator::Printer* printer,
   printer->Print("private:\n");
 #endif
   printer->Indent();
+  printer->Print("char const *(*service_full_name)(void);\n");
   for (int i = 0; i < service->method_count(); ++i) {
     PrintHeaderClientMethodInterfaces(printer, service->method(i).get(), vars,
                                       false);
   }
+#if 1
+  printer->Print("uintptr_t reserved;\n");
   printer->Outdent();
-  printer->Print("} $service_prefix$$Service$;\n");
+  printer->Print(*vars, "} $prefix$$Service$;\n");
+  printer->Print(service->GetTrailingComments("//").c_str());
+#endif
 #if 0
   printer->Print(
       "class Stub final : public StubInterface"
@@ -1190,8 +1187,8 @@ void PrintHeaderService(grpc_generator::Printer* printer,
       "const ::grpc::StubOptions& options = ::grpc::StubOptions());\n");
 #else
   printer->Print(*vars,
-      "grpc_status_code $service_prefix$$Service$_init( Channel channel, $service_prefix$$Service$ *service );\n"
-      "void $service_prefix$$Service$_fini( $service_prefix$$Service$ *service );\n");
+      "\ngrpc_status_code $prefix$$Service$_init(struct grpc_channel *channel, $prefix$$Service$ *service);\n"
+      "void $prefix$$Service$_fini($prefix$$Service$ *service);\n");
 #endif
 
 #if 0
@@ -1335,8 +1332,8 @@ void PrintHeaderService(grpc_generator::Printer* printer,
 
   printer->Outdent();
   printer->Print("};\n");
-#endif
   printer->Print(service->GetTrailingComments("//").c_str());
+#endif
 }
 
 grpc::string GetHeaderServices(grpc_generator::File* file,
@@ -1353,6 +1350,12 @@ grpc::string GetHeaderServices(grpc_generator::File* file,
       vars["Package"].append(".");
     }
     vars["filename_identifier"] = FilenameIdentifier(file->filename());
+
+    if (vars.end() == vars.find("services_namespace")) {
+        vars[ "prefix" ] = file->filename_without_ext() + "_";
+    } else {
+        vars["prefix"] = vars["services_namespace"] + "_";
+    }
 
     if (!params.services_namespace.empty()) {
       vars["services_namespace"] = params.services_namespace;
@@ -1393,7 +1396,7 @@ grpc::string GetHeaderEpilogue(grpc_generator::File* file,
     }
 
     printer->Print(vars, "\n");
-    printer->Print(vars, "#endif  // GRPC_$filename_identifier$__INCLUDED\n");
+    printer->Print(vars, "#endif  /* GRPC_$filename_identifier$__INCLUDED */\n");
 
     printer->Print(file->GetTrailingComments("//").c_str());
   }
@@ -1468,16 +1471,18 @@ void PrintSourceClientMethod(grpc_generator::Printer* printer,
     grpc::string create_args;    // extra arguments to creator
   } async_prefixes[] = {{"Async", "true", ", void* tag", ", tag"},
                         {"PrepareAsync", "false", "", ", nullptr"}};
+#if 0
   if (method->NoStreaming()) {
+#endif
     printer->Print(*vars,
-                   "::grpc::Status $ns$$Service$::Stub::$Method$("
-                   "::grpc::ClientContext* context, "
-                   "const $Request$& request, $Response$* response) {\n");
-    printer->Print(*vars,
-                   "  return ::grpc::internal::BlockingUnaryCall"
-                   "(channel_.get(), rpcmethod_$Method$_, "
-                   "context, request, response);\n}\n\n");
-
+                   "grpc_status_code $prefix$$Service$_$Method$("
+                   "ClientContext *context, "
+                   "const $Request$ request, $Response$ response) {\n"
+                   "  (void) context;\n"
+                   "  (void) request;\n"
+                   "  (void) response;\n"
+                   "  return GRPC_STATUS_UNIMPLEMENTED;\n}\n\n");
+#if 0
     printer->Print(*vars,
                    "void $ns$$Service$::Stub::experimental_async::$Method$("
                    "::grpc::ClientContext* context, "
@@ -1645,6 +1650,7 @@ void PrintSourceClientMethod(grpc_generator::Printer* printer,
                      "}\n\n");
     }
   }
+#endif
 }
 
 void PrintSourceServerMethod(grpc_generator::Printer* printer,
@@ -1653,7 +1659,9 @@ void PrintSourceServerMethod(grpc_generator::Printer* printer,
   (*vars)["Method"] = method->name();
   (*vars)["Request"] = method->input_type_name();
   (*vars)["Response"] = method->output_type_name();
+#if 0
   if (method->NoStreaming()) {
+#endif
     printer->Print(*vars,
                    "::grpc::Status $ns$$Service$::Service::$Method$("
                    "::grpc::ServerContext* context, "
@@ -1665,6 +1673,7 @@ void PrintSourceServerMethod(grpc_generator::Printer* printer,
         "  return ::grpc::Status("
         "::grpc::StatusCode::UNIMPLEMENTED, \"\");\n");
     printer->Print("}\n\n");
+#if 0
   } else if (ClientOnlyStreaming(method)) {
     printer->Print(*vars,
                    "::grpc::Status $ns$$Service$::Service::$Method$("
@@ -1704,6 +1713,7 @@ void PrintSourceServerMethod(grpc_generator::Printer* printer,
         "::grpc::StatusCode::UNIMPLEMENTED, \"\");\n");
     printer->Print("}\n\n");
   }
+#endif
 }
 
 void PrintSourceService(grpc_generator::Printer* printer,
@@ -1713,14 +1723,44 @@ void PrintSourceService(grpc_generator::Printer* printer,
 
   if (service->method_count() > 0) {
     printer->Print(*vars,
-                   "static const char* $prefix$$Service$_method_names[] = {\n");
+                   "/*static const char* $prefix$$Service$_method_names[] = {\n");
     for (int i = 0; i < service->method_count(); ++i) {
       (*vars)["Method"] = service->method(i)->name();
       printer->Print(*vars, "  \"/$Package$$Service$/$Method$\",\n");
     }
-    printer->Print(*vars, "};\n\n");
+    printer->Print(*vars, "};*/\n\n");
   }
 
+  printer->Print(*vars,
+     "const char *$prefix$$Service$_service_full_name(void) {\n"
+     "  return \"$Service$\";\n"
+     "}\n");
+
+  for (int i = 0; i < service->method_count(); ++i) {
+    (*vars)["Idx"] = as_string(i);
+    PrintSourceClientMethod(printer, service->method(i).get(), vars);
+  }
+
+  printer->Print(*vars,
+      "\ngrpc_status_code $prefix$$Service$_init(struct grpc_channel *channel,"
+               " $prefix$$Service$ *service) {\n"
+      "  service->service_full_name = $prefix$$Service$_service_full_name;\n");
+
+  for (int i = 0; i < service->method_count(); ++i) {
+      const grpc_generator::Method* method = service->method(i).get();
+      (*vars)["Method"] = service->method(i)->name();
+      printer->Print(*vars, "  service->$Method$ = $prefix$$Service$_$Method$;\n");
+  }
+
+  printer->Print(*vars,
+      "  service->reserved = (uintptr_t) channel;\n"
+      "  return GRPC_STATUS_OK;\n"
+      "}\n"
+      "void $prefix$$Service$_fini($prefix$$Service$ *service) {\n"
+      "  memset(service, 0, sizeof(*service));\n"
+      "}\n");
+
+#if 0
   printer->Print(*vars,
                  "std::unique_ptr< $ns$$Service$::Stub> $ns$$Service$::NewStub("
                  "const std::shared_ptr< ::grpc::ChannelInterface>& channel, "
@@ -1761,11 +1801,6 @@ void PrintSourceService(grpc_generator::Printer* printer,
   printer->Print("{}\n\n");
   printer->Outdent();
 
-  for (int i = 0; i < service->method_count(); ++i) {
-    (*vars)["Idx"] = as_string(i);
-    PrintSourceClientMethod(printer, service->method(i).get(), vars);
-  }
-
   printer->Print(*vars, "$ns$$Service$::Service::Service() {\n");
   printer->Indent();
   for (int i = 0; i < service->method_count(); ++i) {
@@ -1774,9 +1809,7 @@ void PrintSourceService(grpc_generator::Printer* printer,
     (*vars)["Method"] = method->name();
     (*vars)["Request"] = method->input_type_name();
     (*vars)["Response"] = method->output_type_name();
-#if 0
     if (method->NoStreaming()) {
-#endif
       printer->Print(
           *vars,
           "AddMethod(new ::grpc::internal::RpcServiceMethod(\n"
@@ -1786,7 +1819,6 @@ void PrintSourceService(grpc_generator::Printer* printer,
           "$Request$, "
           "$Response$>(\n"
           "        std::mem_fn(&$ns$$Service$::Service::$Method$), this)));\n");
-#if 0
     } else if (ClientOnlyStreaming(method.get())) {
       printer->Print(
           *vars,
@@ -1815,7 +1847,6 @@ void PrintSourceService(grpc_generator::Printer* printer,
           "$ns$$Service$::Service, $Request$, $Response$>(\n"
           "        std::mem_fn(&$ns$$Service$::Service::$Method$), this)));\n");
     }
-#endif
   }
   printer->Outdent();
   printer->Print(*vars, "}\n\n");
@@ -1826,6 +1857,7 @@ void PrintSourceService(grpc_generator::Printer* printer,
     (*vars)["Idx"] = as_string(i);
     PrintSourceServerMethod(printer, service->method(i).get(), vars);
   }
+#endif
 }
 
 grpc::string GetSourceServices(grpc_generator::File* file,
@@ -1843,10 +1875,10 @@ grpc::string GetSourceServices(grpc_generator::File* file,
     }
     if (!params.services_namespace.empty()) {
       vars["ns"] = params.services_namespace + "::";
-      vars["prefix"] = params.services_namespace;
+      vars["prefix"] = params.services_namespace + "_";
     } else {
       vars["ns"] = "";
-      vars["prefix"] = "";
+      vars[ "prefix" ] = file->filename_without_ext() + "_";
     }
 
     for (int i = 0; i < file->service_count(); ++i) {
