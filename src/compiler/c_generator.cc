@@ -138,8 +138,7 @@ grpc::string GetHeaderIncludes(grpc_generator::File* file,
     printer->Print(vars, "\n");
     printer->Print(vars, "/* namespace grpc { */\n");
     printer->Print(vars, "struct grpc_channel;\n");
-    printer->Print(vars, "struct _ClientContext;\n");
-    printer->Print(vars, "typedef struct _ClientContext* ClientContext;\n");
+    printer->Print(vars, "struct grpc_client_context;\n");
     printer->Print(vars, "struct _CompletionQueue;\n");
     printer->Print(vars, "typedef struct _CompletionQueue* CompletionQueue;\n");
     printer->Print(vars, "struct _ServerCompletionQueue;\n");
@@ -174,7 +173,7 @@ void PrintHeaderClientMethodInterfaces(
       printer->Indent();
       printer->Print(
           *vars,
-          "grpc_status_code (*$Method$)(ClientContext* context, "
+          "grpc_status_code (*$Method$)(struct grpc_client_context* context, "
           "const $Request$ request, $Response$ response);\n");
       printer->Outdent();
 #if 0
@@ -234,7 +233,7 @@ void PrintHeaderClientMethod(grpc_generator::Printer* printer,
 #endif
       printer->Print(
           *vars,
-          "grpc_status_code (*$Method$)(ClientContext* context, "
+          "grpc_status_code (*$Method$)(struct grpc_client_context* context, "
           "const $Request$& request, $Response$* response);\n");
 #if 0
       for (auto async_prefix : async_prefixes) {
@@ -1104,7 +1103,7 @@ void PrintHeaderService(grpc_generator::Printer* printer,
 
   printer->Print(service->GetLeadingComments("//").c_str());
   printer->Print(*vars,
-                 "typedef struct _$prefix$$Service$ {\n");
+                 "typedef struct {\n");
 #if 0
   // Service metadata
   printer->Print(*vars,
@@ -1138,11 +1137,13 @@ void PrintHeaderService(grpc_generator::Printer* printer,
 #endif
   printer->Indent();
   printer->Print("char const *(*service_full_name)(void);\n");
+  printer->Outdent();
   for (int i = 0; i < service->method_count(); ++i) {
     PrintHeaderClientMethodInterfaces(printer, service->method(i).get(), vars,
                                       false);
   }
 #if 1
+  printer->Indent();
   printer->Print("uintptr_t reserved;\n");
   printer->Outdent();
   printer->Print(*vars, "} $prefix$$Service$;\n");
@@ -1476,7 +1477,7 @@ void PrintSourceClientMethod(grpc_generator::Printer* printer,
 #endif
     printer->Print(*vars,
                    "grpc_status_code $prefix$$Service$_$Method$("
-                   "ClientContext *context, "
+                   "struct grpc_client_context*context, "
                    "const $Request$ request, $Response$ response) {\n"
                    "  (void) context;\n"
                    "  (void) request;\n"
