@@ -129,6 +129,7 @@ grpc::string GetHeaderIncludes(grpc_generator::File* file,
                     "");
     }
     static const char* headers_strs[] = {
+        "grpc/impl/codegen/client_context.h",
         "grpc/impl/codegen/grpc_types.h",
         "grpc/impl/codegen/status.h",
         "grpc/impl/codegen/sync.h"};

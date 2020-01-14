@@ -1314,6 +1314,7 @@ target_link_libraries(grpc
 foreach(_hdr
   include/grpc/impl/codegen/byte_buffer.h
   include/grpc/impl/codegen/byte_buffer_reader.h
+  include/grpc/impl/codegen/client_context.h
   include/grpc/impl/codegen/compression_types.h
   include/grpc/impl/codegen/connectivity_state.h
   include/grpc/impl/codegen/grpc_types.h
